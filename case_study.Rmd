@@ -150,9 +150,10 @@ nyc_airbnb |>
     price < 1000,
     room_type == "Entire home/apt",
     borough == "Manhattan") |>
+  sample_n(500) |> 
   leaflet() |> 
-addTiles() |> 
-  addMarkers(~long, ~lat)
+addProviderTiles(providers$CartoDB.Positron) |> 
+  addCircleMarkers(~long, ~lat, radius = .5)
   
 ```
 
