@@ -1,0 +1,158 @@
+---
+title: "case_study"
+author: "Sarah Haberlack"
+date: "2023-10-10"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(p8105.datasets)
+library(ggridges)
+library(leaflet)
+
+data(nyc_airbnb)
+nyc_airbnb =
+  nyc_airbnb |> 
+  rename(borough = neighbourhood_group) |> 
+  mutate(stars = review_scores_location / 2)
+```
+
+```{r}
+str(nyc_airbnb)
+```
+
+# Brainstorm questions
+- Where are AirBNBs expensive?
+  Borough? neighborhood?
+  Do other factors (room type) affect price? What about rating?
+- How long are AirBNBs active?
+  Are AirBNBs illegal and do they get shut down?
+- Which units have the most availability?
+- How is review score impacted by location?
+- How many apts are run by one host?
+
+Look at it
+```{r}
+view(nyc_airbnb)
+
+bronx = nyc_airbnb |> filter(borough == "Bronx")
+
+fivestars = filter(nyc_airbnb)
+
+```
+ 
+## Do some EDA
+```{r}
+nyc_airbnb |> 
+  count(borough)
+
+nyc_airbnb |> 
+  group_by(borough, room_type) |> 
+  summarize(mean_price = mean(price)) |> 
+  pivot_wider(
+    names_from = room_type,
+    values_from = mean_price
+  )
+```
+
+```{r}
+nyc_airbnb |> 
+  group_by(borough, room_type) |> 
+  summarize(median_price = median(price)) |> 
+  pivot_wider(
+    names_from = room_type,
+    values_from = median_price
+  )
+```
+
+```{r}
+nyc_airbnb |> 
+  ggplot(aes(x = price)) +
+  geom_histogram() +
+  facet_grid(borough ~ room_type)
+```
+
+```{r}
+nyc_airbnb |> 
+  filter(price >=9500)
+```
+
+```{r}
+nyc_airbnb |> 
+  filter(price < 1000, room_type == "Entire home/apt") |> 
+  ggplot(aes(x = price)) +
+  geom_histogram() +
+  facet_grid(. ~ borough)
+```
+
+Take averages of lowest priced neighborhoods in manhattan.
+```{r}
+nyc_airbnb |> 
+  filter(
+    price < 1000,
+    room_type == "Entire home/apt",
+    borough == "Manhattan") |> 
+  group_by(neighborhood) |> 
+  summarize(
+    n_apt = n(),
+    mean_price = mean(price)) |> 
+  arrange(desc(mean_price))
+```
+
+
+```{r}
+nyc_airbnb |> 
+  filter(
+    price < 1000,
+    room_type == "Entire home/apt",
+    borough == "Manhattan") |>
+  ggplot(aes(x = neighborhood, y = price)) +
+  geom_boxplot()
+```
+
+That boxplot was alphabetically ordered. Unhelpful. Let's group neighborhoods by price, and figure out how to rearrange the graphs so that we can read the neighborhood names.
+```{r}
+nyc_airbnb |> 
+  filter(
+    price < 1000,
+    room_type == "Entire home/apt",
+    borough == "Manhattan") |>
+  mutate(neighbourhood = fct_reorder(neighborhood, price)) |> 
+  ggplot(aes(x = price, y = neighborhood)) +
+  geom_density_ridges()
+```
+
+## Try to make a map
+Because we have latitude and longitude, we can make maps!
+
+```{r}
+nyc_airbnb |> 
+  filter(
+    price < 1000,
+    room_type == "Entire home/apt",
+    borough == "Manhattan") |>
+  ggplot(aes(x = lat, y = long, color = price)) +
+  geom_point()
+```
+
+Try something else entirely.
+Leaflet for mapping. teachdatascience.com
+start with the df,
+do leaflet or GGplot,
+them you add geometry on top of that.
+markers is likely adding the locations of the marks on the map. 
+then add a location to long and lat.
+
+```{r}
+nyc_airbnb |> 
+  filter(
+    price < 1000,
+    room_type == "Entire home/apt",
+    borough == "Manhattan") |>
+  leaflet() |> 
+addTiles() |> 
+  addMarkers(~long, ~lat)
+  
+```
+
